@@ -25,8 +25,15 @@ async def websocket_chat_endpoint(websocket: WebSocket):
             raw = await websocket.receive_text()
             print("Raw message:", raw)
 
-            import json
-            data = json.loads(raw)
+            try:
+                import json
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                 await websocket.send_json({
+                    "type": "error",
+                    "data": "Invalid JSON"
+                })
+                 continue
 
             query = data.get("query")
             if not query:
@@ -38,16 +45,24 @@ async def websocket_chat_endpoint(websocket: WebSocket):
 
             print("Query:", query)
 
-            search_results = search_service.web_search(query)
-            sorted_results = sort_source_service.sort_sources(
+            # Await the async methods
+            search_results, images = await search_service.web_search(query)
+            
+            # Await the async sort
+            sorted_results = await sort_source_service.sort_sources(
                 query, search_results
-            )[:5]
+            )
+            sorted_results = sorted_results[:5]
 
             await websocket.send_json({
                 "type": "search_result",
-                "data": sorted_results
+                "data": sorted_results,
+                "images": images
             })
 
+            # LLM service returns a generator (sync or async? It yielded chunks synchronously in code)
+            # But the underlying generate loop is sync generator.
+            # We can iterate it directly.
             for chunk in llm_service.generate_response(query, sorted_results):
                 await websocket.send_json({
                     "type": "content",
@@ -66,10 +81,10 @@ async def websocket_chat_endpoint(websocket: WebSocket):
 
 # chat
 @app.post("/chat")
-def chat_endpoint(body: ChatBody):
-    search_results = search_service.web_search(body.query)
+async def chat_endpoint(body: ChatBody):
+    search_results, images = await search_service.web_search(body.query)
 
-    sorted_results = sort_source_service.sort_sources(body.query, search_results)
+    sorted_results = await sort_source_service.sort_sources(body.query, search_results)
 
     response = llm_service.generate_response(body.query, sorted_results)
 

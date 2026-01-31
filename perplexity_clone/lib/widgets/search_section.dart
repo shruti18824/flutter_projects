@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:perplexity_clone/pages/chat_page.dart';
 import 'package:perplexity_clone/services/chat_web_service.dart';
 import 'package:perplexity_clone/theme/colors.dart';
@@ -15,10 +16,46 @@ class SearchSection extends StatefulWidget {
 class _SearchSectionState extends State<SearchSection> {
   final queryController = TextEditingController();
 
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+      if (result != null) {
+         // File selected
+         // PlatformFile file = result.files.first;
+         // TODO: handle file upload/content
+         // For now just print or show snackbar
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text("Selected: ${result.files.first.name}"))
+           );
+         }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print("File picker error: $e");
+    }
+  }
+
   @override
   void dispose() {
     super.dispose();
     queryController.dispose();
+  }
+
+  void _search() {
+    final query = queryController.text.trim();
+    if (query.isEmpty) return;
+
+    // Ensure connected
+    ChatWebService().connect();
+    ChatWebService().chat(query);
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChatPage(question: query),
+      ),
+    );
   }
 
   @override
@@ -52,6 +89,7 @@ class _SearchSectionState extends State<SearchSection> {
                 padding: const EdgeInsets.all(16.0),
                 child: TextField(
                   controller: queryController,
+                  onSubmitted: (_) => _search(),
                   decoration: InputDecoration(
                     hintText: 'Search anything...',
                     hintStyle: TextStyle(
@@ -76,18 +114,11 @@ class _SearchSectionState extends State<SearchSection> {
                     SearchBarButton(
                       icon: Icons.add_circle_outline_outlined,
                       text: 'Attach',
+                      onTap: _pickFile,
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: () {
-                        ChatWebService().chat(queryController.text.trim());
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ChatPage(question: queryController.text.trim()),
-                          ),
-                        );
-                      },
+                      onTap: _search,
                       child: Container(
                         padding: EdgeInsets.all(9),
                         decoration: BoxDecoration(

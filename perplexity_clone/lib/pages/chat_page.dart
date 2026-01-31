@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:perplexity_clone/theme/colors.dart';
 import 'package:perplexity_clone/widgets/answer_section.dart';
 import 'package:perplexity_clone/widgets/side_bar.dart';
+import 'package:perplexity_clone/widgets/side_panel.dart';
 import 'package:perplexity_clone/widgets/source_section.dart';
 
 class ChatPage extends StatelessWidget {
@@ -43,11 +43,8 @@ class ChatPage extends StatelessWidget {
             ),
           ),
           kIsWeb
-              ? Placeholder(
-                  strokeWidth: 0,
-                  color: AppColors.background,
-                )
-              : SizedBox(),
+              ? const SidePanel()
+              : const SizedBox(),
         ],
       ),
     );

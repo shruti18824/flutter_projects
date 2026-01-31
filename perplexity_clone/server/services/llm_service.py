@@ -31,29 +31,16 @@ class LLMService:
         """
 
         try:
-            response = self.client.models.generate_content(
+            # Use generate_content_stream for the new V1 SDK
+            for chunk in self.client.models.generate_content_stream(
                 model=self.model_name,
-                contents=full_prompt
-            )
-
-            # response could be a tuple, list, or single object
-            if isinstance(response, tuple) or isinstance(response, list):
-                response_items = list(response)
-            else:
-                response_items = [response]
-
-            # safely yield text from each item
-            for item in response_items:
-                if hasattr(item, "text"):
-                    text = item.text
-                elif isinstance(item, dict):
-                    text = item.get("content", "")
-                else:
-                    text = str(item)
-
-                # split by newlines or small chunks if needed
-                for chunk in text.split("\n"):
-                    yield chunk
+                contents=full_prompt,
+            ):
+                if hasattr(chunk, "text"):
+                    yield chunk.text
+                elif hasattr(chunk, "candidates") and chunk.candidates:
+                     # Fallback for some structure variations
+                     yield chunk.candidates[0].content.parts[0].text
 
         except Exception as e:
             # yield error info to frontend

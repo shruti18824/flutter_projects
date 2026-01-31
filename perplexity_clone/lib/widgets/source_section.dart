@@ -16,12 +16,25 @@ class _SourcesSectionState extends State<SourcesSection> {
   @override
   void initState() {
     super.initState();
+    
+    // Check if data already arrived (fix race condition)
+    final cached = ChatWebService().lastSearchResult;
+    if (cached != null) {
+      if (mounted) {
+        setState(() {
+          searchResults = cached['data'];
+          isLoading = false;
+        });
+      }
+    }
 
     ChatWebService().searchResultStream.listen((data) {
-      setState(() {
-        searchResults = data['data'];
-        isLoading = false;
-      });
+      if (mounted) {
+          setState(() {
+            searchResults = data['data'];
+            isLoading = false;
+          });
+      }
     });
   }
 
